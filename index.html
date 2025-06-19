@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Jouer une note MIDI</title>
+  <style>
+    body {
+      background: #222;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    button {
+      background: #4caf50;
+      color: #fff;
+      border: none;
+      padding: 20px 40px;
+      font-size: 1.5em;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 30px;
+    }
+    button:hover {
+      background: #388e3c;
+    }
+    .status {
+      margin-top: 20px;
+      font-size: 1.1em;
+    }
+  </style>
+</head>
+<body>
+  <h1>Jouer une note MIDI</h1>
+  <button id="play">Jouer Do4</button>
+  <div class="status" id="status">En attente de connexion MIDI...</div>
+
+  <script>
+    let output = null;
+    const status = document.getElementById('status');
+    const playBtn = document.getElementById('play');
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function playNote(note = 60, velocity = 100, duration = 1000) {
+      if (!output) {
+        status.textContent = "Aucune sortie MIDI détectée.";
+        return;
+      }
+      // Note ON
+      output.send([0x90, note, velocity]);
+      await sleep(duration);
+      // Note OFF
+      output.send([0x80, note, 0]);
+    }
+
+    if (navigator.requestMIDIAccess) {
+      navigator.requestMIDIAccess().then(midiAccess => {
+        const outputs = Array.from(midiAccess.outputs.values());
+        if (outputs.length === 0) {
+          status.textContent = "Aucune sortie MIDI détectée.";
+          playBtn.disabled = true;
+          return;
+        }
+        output = outputs[0];
+        status.textContent = "Sortie MIDI détectée : " + output.name;
+        playBtn.disabled = false;
+      }, () => {
+        status.textContent = "Accès MIDI refusé.";
+        playBtn.disabled = true;
+      });
+    } else {
+      status.textContent = "Web MIDI API non supportée par ce navigateur.";
+      playBtn.disabled = true;
+    }
+
+    playBtn.addEventListener('click', () => playNote());
+  </script>
+</body>
+</html>
